@@ -15,6 +15,7 @@ Náhled ovládání mapy: https://www.youtube.com/watch?v=hC3fB_leQMU
 - 🚒 **Herní režim „Zachraň město"** dostupný přímo z webového rozhraní (tlačítko *Zachraň město (hra)*), s návratem zpět na mapu.
 - ❓ **100 zabudovaných kvízových otázek o ČR** na úrovni cca 10letého dítěte — hra je hratelná ihned po zapnutí, bez nahrávání (otázky lze i dočasně přepsat přes web).
 - 🎨 **Decentně učesané webové rozhraní** mapy (příjemnější písmo, jemně stylovaná tlačítka, zvýrazněný aktivní režim).
+- 🔎 **mDNS** — mapa je dostupná na **http://mapa.local** bez znalosti IP adresy.
 
 ## 🗺️ Režimy zobrazení na mapě
 
@@ -98,7 +99,9 @@ sudo usermod -aG dialout $USER   # poté se odhlas a přihlas
 
 ## ▶️ Použití
 
-Po nahrání otevři **Sériový monitor** (115200 Bd). Mapa po připojení k Wi-Fi vypíše svou **IP adresu** a hostname `laskakitmapa`. Tuto IP (nebo `http://laskakitmapa`) zadej v prohlížeči telefonu/počítače ve stejné síti — objeví se ovládání mapy včetně tlačítka pro hru.
+Nejjednodušší je otevřít v prohlížeči **http://mapa.local** — mapa se v síti sama ohlašuje přes mDNS/Bonjour, takže nemusíš znát její IP adresu (funguje na většině zařízení; na některých Androidech mDNS chybí — pak použij IP).
+
+Případně otevři **Sériový monitor** (115200 Bd) — mapa po připojení k Wi-Fi vypíše svou **IP adresu** i `http://mapa.local`. Zadej ji v prohlížeči telefonu/počítače ve stejné síti a objeví se ovládání mapy včetně tlačítka pro hru.
 
 ---
 

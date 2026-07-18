@@ -10,6 +10,7 @@
 
 #include <WiFi.h>
 #include <WebServer.h>
+#include <ESPmDNS.h>
 #include <Adafruit_NeoPixel.h>
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
@@ -958,6 +959,13 @@ void setup() {
   Serial.println(WiFi.localIP());
   Serial.print("Hostname: ");
   Serial.println(hostname);
+  // mDNS: mapa bude dostupná i na http://mapa.local (bez znalosti IP)
+  if (MDNS.begin("mapa")) {
+    MDNS.addService("http", "tcp", 80);
+    Serial.println("mDNS spuštěno: http://mapa.local");
+  } else {
+    Serial.println("mDNS se nepodařilo spustit");
+  }
   // Pro HTTP pozadavku / zavolame funkci httpDotaz
   server.on("/", httpDotaz);
   // Herní režim "Zachraň město"
