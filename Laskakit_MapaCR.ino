@@ -421,7 +421,7 @@ void processMapRequest(const String &arg, SelectedMap mapType, bool selectedIsTM
       // Redraw map
       stahniData();
 
-      server.sendHeader("Location", "http://" + WiFi.localIP().toString() + "");
+      server.sendHeader("Location", "/");
       server.send(302);  // Kód 302 označuje přesměrování (Found/Temporary Redirect)
       break;
     case -1:
@@ -760,7 +760,7 @@ void handleGameStop() {
   gameActive = false;
   pixely.setBrightness(jas);
   stahniData();  // překreslí aktuální mapu
-  server.sendHeader("Location", "http://" + WiFi.localIP().toString() + "");
+  server.sendHeader("Location", "/");
   server.send(302);
 }
 
@@ -852,8 +852,7 @@ void httpDotaz(void) {
                                   "  <meta charset=\"UTF-8\">\n"
                                   "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0\">\n"
                                   "  <title>Ovládání mapy</title>\n"
-                                  "  <link href=\"http://"
-                                  + WiFi.localIP().toString() + "?css={}\" rel=\"stylesheet\" crossorigin=\"anonymous\" />\n"
+                                  "  <link href=\"/?css={}\" rel=\"stylesheet\" />\n"
                                                                 "</head>\n"
                                                                 "<body>\n"
                                                                 "  <h1>Ovládání mapy</h1>\n"
@@ -881,50 +880,42 @@ void httpDotaz(void) {
                                                                                                    "\n"
                                                                                                    "  <script>\n"
                                                                                                    "    function sendRainRequest() {\n"
-                                                                                                   "      var url = \"http://"
-                                  + WiFi.localIP().toString() + "?rain={}\";\n"
+                                                                                                   "      var url = \"/?rain={}\";\n"
                                                                 "      window.location.href = url;\n"
                                                                 "    }\n"
                                                                 "\n"
                                                                 "    function sendTempRequest() {\n"
-                                                                "      var url = \"http://"
-                                  + WiFi.localIP().toString() + "?temp={}\";\n"
+                                                                "      var url = \"/?temp={}\";\n"
                                                                 "      window.location.href = url;\n"
                                                                 "    }\n"
                                                                 "\n"
                                                                 "    function sendHumidRequest() {\n"
-                                                                "      var url = \"http://"
-                                  + WiFi.localIP().toString() + "?humidity={}\";\n"
+                                                                "      var url = \"/?humidity={}\";\n"
                                                                 "      window.location.href = url;\n"
                                                                 "    }\n"
                                                                 "\n"
                                                                 "    function sendPressureRequest() {\n"
-                                                                "      var url = \"http://"
-                                  + WiFi.localIP().toString() + "?pressure={}\";\n"
+                                                                "      var url = \"/?pressure={}\";\n"
                                                                 "      window.location.href = url;\n"
                                                                 "    }\n"
                                                                 "\n"
                                                                 "    function sendDustRequest() {\n"
-                                                                "      var url = \"http://"
-                                  + WiFi.localIP().toString() + "?dust={}\";\n"
+                                                                "      var url = \"/?dust={}\";\n"
                                                                 "      window.location.href = url;\n"
                                                                 "    }\n"
                                                                 "\n"
                                                                 "    function sendFlagRequest() {\n"
-                                                                "      var url = \"http://"
-                                  + WiFi.localIP().toString() + "?flag={}\";\n"
+                                                                "      var url = \"/?flag={}\";\n"
                                                                 "      window.location.href = url;\n"
                                                                 "    }\n"
                                                                 "\n"
                                                                 "    function sendCitiesMajorRequest() {\n"
-                                                                "      var url = \"http://"
-                                  + WiFi.localIP().toString() + "?citiesMajor={}\";\n"
+                                                                "      var url = \"/?citiesMajor={}\";\n"
                                                                 "      window.location.href = url;\n"
                                                                 "    }\n"
                                                                 "\n"
                                                                 "    function sendRegionsRequest() {\n"
-                                                                "      var url = \"http://"
-                                  + WiFi.localIP().toString() + "?regions={}\";\n"
+                                                                "      var url = \"/?regions={}\";\n"
                                                                 "      window.location.href = url;\n"
                                                                 "    }\n"
                                                                 "  </script>\n"
@@ -976,6 +967,8 @@ void setup() {
   server.on("/answer", HTTP_POST, handleGameAnswer);
   server.on("/uploadQuestions", HTTP_POST, handleGameUpload);
   server.on("/gameStop", HTTP_GET, handleGameStop);
+  // Utišíme 404 na favicon (prohlížeče si ji automaticky žádají)
+  server.on("/favicon.ico", HTTP_GET, []() { server.send(204); });
   // Seed pro náhodná čísla ve hře
   randomSeed(esp_random());
   // Inicializace herního stavu
