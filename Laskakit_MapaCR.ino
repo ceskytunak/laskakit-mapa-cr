@@ -13,6 +13,7 @@
 #include <Adafruit_NeoPixel.h>
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
+#include <vector>
 
 // Customizable variables
 #define DEBUG false
@@ -74,6 +75,41 @@ enum SelectedMap {
 SelectedMap currentMap;
 bool currentMapTMEP = false;
 bool firstRun = true;
+
+// ---------------------------------------------------------------------------
+// Herní režim "Zachraň město"
+// Integrováno z LaskaKit/LED_Czech_Map (SW/Hra_Zachran_Mesto).
+// Používá stejný pásek RGB LED (pixely) i stejný WebServer (server).
+// ---------------------------------------------------------------------------
+#define GAME_BRIGHTNESS 50         // Herní režim svítí jasněji než mapa
+bool gameActive = false;           // true = mapa je přepnuta do herního režimu
+bool gameStarted = false;          // true = hra byla inicializována (hoří města)
+
+enum CityState { CITY_OFF = 0, CITY_BURNING = 1, CITY_EXTINGUISHED = 2 };
+CityState cityState[72];
+int currentQuestion[72];           // -1 = pro město není vybrána otázka
+
+// Názvy měst podle pořadí LaskaKit ID (LED 0-71)
+String cityNames[72] = {
+  "Děčín", "Liberec", "Jablonec nad Nisou", "Ústí nad Labem", "Česká Lípa", "Semily",
+  "Teplice", "Trutnov", "Litoměřice", "Most", "Chomutov", "Jičín", "Náchod", "Mladá Boleslav",
+  "Mělník", "Louny", "Karlovy Vary", "Jeseník", "Hradec Králové", "Sokolov", "Nymburk",
+  "Rychnov nad Kněžnou", "Kladno", "Rakovník", "Cheb", "Bruntál", "Praha", "Pardubice",
+  "Kolín", "Ústí nad Orlicí", "Opava", "Šumperk", "Beroun", "Kutná Hora", "Chrudim",
+  "Karviná", "Ostrava-město", "Tachov", "Svitavy", "Benešov", "Plzeň-město", "Rokycany",
+  "Frýdek-Místek", "Příbram", "Nový Jičín", "Olomouc", "Havlíčkův Brod", "Žďár nad Sázavou",
+  "Prostějov", "Přerov", "Domažlice", "Pelhřimov", "Tábor", "Jihlava", "Klatovy", "Blansko",
+  "Vsetín", "Kroměříž", "Písek", "Vyškov", "Strakonice", "Zlín", "Třebíč", "Brno-město",
+  "Jindřichův Hradec", "Uherské Hradiště", "Prachatice", "České Budějovice", "Hodonín",
+  "Znojmo", "Český Krumlov", "Břeclav"
+};
+
+struct Question {
+  String q;
+  String opts[4];
+  uint8_t correct;
+};
+std::vector<Question> questionsDynamic;
 
 // Dekoder JSONu a rozsvecovac svetylek
 int jsonDecoder(String s, bool log) {
@@ -258,6 +294,11 @@ void processMapRequest(const String &arg, SelectedMap mapType, bool selectedIsTM
 
   switch (err) {
     case 0:
+      // Výběr mapy vždy ukončí herní režim a vrátí mapový jas
+      if (gameActive) {
+        gameActive = false;
+        pixely.setBrightness(jas);
+      }
       currentMap = mapType;
       currentMapTMEP = selectedIsTMEP;
 
@@ -290,6 +331,330 @@ void processMapRequest(const String &arg, SelectedMap mapType, bool selectedIsTM
 
 float getMiddleNumber(float minVal, float maxVal) {
   return minVal + (maxVal - minVal) / 2;
+}
+
+// ---------------------------------------------------------------------------
+// Herní logika "Zachraň město"
+// ---------------------------------------------------------------------------
+
+// JSON-escape textu (uvozovky, zpětné lomítko, nový řádek)
+String gameJsonEscape(const String &s) {
+  String out;
+  out.reserve(s.length() * 2);
+  for (size_t i = 0; i < s.length(); ++i) {
+    char c = s.charAt(i);
+    if (c == '\\') out += "\\\\";
+    else if (c == '"') out += "\\\"";
+    else if (c == '\n') out += "\\n";
+    else if (c == '\r') { /* ignore */ }
+    else out += c;
+  }
+  return out;
+}
+
+// Vybere náhodné dosud nehořící a neuhašené město
+int gamePickRandomUnburned() {
+  int candidates[72];
+  int cnt = 0;
+  for (int i = 0; i < 72; i++)
+    if (cityState[i] == CITY_OFF) candidates[cnt++] = i;
+  if (cnt == 0) return -1;
+  return candidates[random(cnt)];
+}
+
+// Vykreslí LED podle herního stavu (statický obraz, bez blikání)
+void gameUpdateStrip() {
+  for (int i = 0; i < 72; i++) {
+    if (cityState[i] == CITY_BURNING) pixely.setPixelColor(i, pixely.Color(255, 50, 0));
+    else if (cityState[i] == CITY_EXTINGUISHED) pixely.setPixelColor(i, pixely.Color(0, 0, 255));
+    else pixely.setPixelColor(i, 0);
+  }
+  pixely.setBrightness(GAME_BRIGHTNESS);
+  pixely.show();
+}
+
+// Spustí (nebo restartuje) hru: zapálí 10 náhodných měst
+void gameStart() {
+  for (int i = 0; i < 72; i++) {
+    cityState[i] = CITY_OFF;
+    currentQuestion[i] = -1;
+  }
+  int count = 0;
+  while (count < 10) {
+    int idx = gamePickRandomUnburned();
+    if (idx < 0) break;
+    cityState[idx] = CITY_BURNING;
+    count++;
+  }
+  gameStarted = true;
+  gameUpdateStrip();
+}
+
+// Rozparsuje jeden řádek otázky: cislo;otazka;odp0;odp1;odp2;odp3;spravny(0-3)
+bool gameParseQuestionLine(const String &lineRaw, Question &q, String &errorMsg) {
+  String line = lineRaw;
+  line.trim();
+  if (line.length() == 0) { errorMsg = "Prázdný řádek"; return false; }
+
+  int positions[6];
+  int found = 0, pos = 0;
+  while (found < 6) {
+    int p = line.indexOf(';', pos);
+    if (p < 0) break;
+    positions[found++] = p;
+    pos = p + 1;
+  }
+  if (found < 6) { errorMsg = "Nedostatek středníků (očekáváno 6 oddělovačů ';')."; return false; }
+
+  String qtext    = line.substring(positions[0] + 1, positions[1]); qtext.trim();
+  String o0       = line.substring(positions[1] + 1, positions[2]); o0.trim();
+  String o1       = line.substring(positions[2] + 1, positions[3]); o1.trim();
+  String o2       = line.substring(positions[3] + 1, positions[4]); o2.trim();
+  String o3       = line.substring(positions[4] + 1, positions[5]); o3.trim();
+  String correctS = line.substring(positions[5] + 1); correctS.trim();
+
+  if (qtext.length() == 0) { errorMsg = "Prázdný text otázky."; return false; }
+  if (o0.length() == 0 || o1.length() == 0 || o2.length() == 0 || o3.length() == 0) {
+    errorMsg = "Některá odpověď je prázdná."; return false;
+  }
+  if (correctS.length() == 0) { errorMsg = "Chybí index správné odpovědi."; return false; }
+  for (size_t i = 0; i < correctS.length(); ++i) {
+    char c = correctS.charAt(i);
+    if (!(c >= '0' && c <= '9')) { errorMsg = "Index správné odpovědi není číslo."; return false; }
+  }
+  int correct = correctS.toInt();
+  if (correct < 0 || correct > 3) { errorMsg = "Index správné odpovědi mimo rozsah 0-3 (" + correctS + ")"; return false; }
+
+  q.q = qtext;
+  q.opts[0] = o0; q.opts[1] = o1; q.opts[2] = o2; q.opts[3] = o3;
+  q.correct = (uint8_t)correct;
+  return true;
+}
+
+// Načte více řádků otázek (CRLF i LF)
+void gameLoadQuestions(const String &text, String &result) {
+  questionsDynamic.clear();
+  int start = 0, lineNo = 1;
+  while (start < (int)text.length()) {
+    int end = text.indexOf('\n', start);
+    if (end < 0) end = text.length();
+    String line = text.substring(start, end);
+    if (line.endsWith("\r")) line = line.substring(0, line.length() - 1);
+    line.trim();
+    if (line.length() > 0) {
+      Question qq;
+      String err;
+      if (!gameParseQuestionLine(line, qq, err)) {
+        result = "Chyba na řádku " + String(lineNo) + ": " + err;
+        return;
+      }
+      questionsDynamic.push_back(qq);
+    }
+    start = end + 1;
+    lineNo++;
+  }
+  result = "OK, načteno " + String(questionsDynamic.size()) + " otázek.";
+}
+
+// JSON se stavem všech měst
+String gameStatusJSON() {
+  String s = "{\"cities\":[";
+  for (int i = 0; i < 72; i++) {
+    s += "{\"idx\":" + String(i) + ",\"name\":\"" + gameJsonEscape(cityNames[i]) + "\",\"state\":" + String((int)cityState[i]) + "}";
+    if (i < 71) s += ",";
+  }
+  s += "]}";
+  return s;
+}
+
+// JSON otázky pro dané město
+String gameQuestionJSON(int idx) {
+  if (idx < 0 || idx >= 72) return String();
+  if (questionsDynamic.empty()) {
+    return "{\"city\":\"" + gameJsonEscape(cityNames[idx]) + "\",\"q\":{\"text\":\"(Žádné otázky)\",\"opts\":[\"-\",\"-\",\"-\",\"-\"]}}";
+  }
+  if (currentQuestion[idx] < 0 || currentQuestion[idx] >= (int)questionsDynamic.size()) {
+    currentQuestion[idx] = random(questionsDynamic.size());
+  }
+  Question &q = questionsDynamic[currentQuestion[idx]];
+  String s = "{\"city\":\"" + gameJsonEscape(cityNames[idx]) + "\",\"q\":{\"text\":\"" + gameJsonEscape(q.q) + "\",\"opts\":[";
+  for (int i = 0; i < 4; i++) {
+    s += "\"" + gameJsonEscape(q.opts[i]) + "\"";
+    if (i < 3) s += ",";
+  }
+  s += "]}}";
+  return s;
+}
+
+// Herní webová stránka
+String gamePageHTML() {
+  String s = R"rawliteral(<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Zachraň město</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;background:#f5f7fb;color:#222;margin:10px}
+    h1{font-size:1.6rem;margin:0 0 12px 0}
+    .card{background:#fff;border-radius:12px;padding:12px;box-shadow:0 4px 10px rgba(0,0,0,0.06);margin-bottom:12px}
+    .city{display:flex;justify-content:space-between;padding:6px;border-bottom:1px solid #eee}
+    .statusOff{color:#999}.statusBurn{color:#c0392b;font-weight:700}.statusExt{color:#2980b9;font-weight:700}
+    button{display:block;width:100%;padding:10px 12px;margin:6px 0;border-radius:8px;border:0;background:#2d9cdb;color:white;cursor:pointer}
+    .back{background:#7f8c8d}
+    .question{margin:10px 0;font-weight:600}
+    form textarea{width:100%;padding:8px;margin:6px 0;border-radius:8px;border:1px solid #ddd;box-sizing:border-box;font-family:monospace}
+  </style>
+</head>
+<body>
+  <h1>🚒 Zachraň město</h1>
+  <button class="back" onclick="location.href='/gameStop'">⬅ Zpět na mapu</button>
+
+  <div class="card"><h3>Otázka</h3><div id="questionBox">Klikni <b>Spustit hru</b>.</div></div>
+  <div class="card"><h3>Hořící města</h3><div id="burningList"></div></div>
+  <div class="card"><h3>Uhašená města</h3><div id="extList"></div></div>
+  <div class="card"><h3>Bezpečná města</h3><div id="safeList"></div></div>
+
+  <div class="card">
+    <h3>Nahrát otázky</h3>
+    <div style="font-size:0.9rem;color:#666;margin-bottom:6px">
+      Každý řádek: <code>číslo;otázka;odp0;odp1;odp2;odp3;index_správné(0-3)</code>
+    </div>
+    <form onsubmit="uploadQuestions();return false;">
+      <textarea id="questionsText" rows="6" placeholder="1;Hlavní město ČR?;Praha;Brno;Ostrava;Plzeň;0"></textarea>
+      <button type="submit">Nahrát otázky</button>
+    </form>
+  </div>
+
+  <div style="margin:12px 0">
+    <button onclick="startGame()">Spustit hru</button>
+    <button onclick="fetchStatus()">Aktualizovat</button>
+  </div>
+
+  <script>
+    let currentCity=-1;
+    async function fetchStatus(){
+      const j=await (await fetch('/status')).json();
+      const burn=document.getElementById('burningList');burn.innerHTML='';
+      const ext=document.getElementById('extList');ext.innerHTML='';
+      const safe=document.getElementById('safeList');safe.innerHTML='';
+      j.cities.forEach((c)=>{
+        const d=document.createElement('div');d.className='city';
+        if(c.state==1){d.innerHTML='<div>'+c.name+'</div><div class=statusBurn>Hoří</div>';burn.appendChild(d);}
+        else if(c.state==2){d.innerHTML='<div>'+c.name+'</div><div class=statusExt>Uhašeno</div>';ext.appendChild(d);}
+        else{d.innerHTML='<div>'+c.name+'</div><div class=statusOff>OK</div>';safe.appendChild(d);}
+      });
+      const burning=j.cities.filter(c=>c.state==1);
+      if(burning.length>0){currentCity=burning[0].idx;loadQuestion(currentCity);}
+      else{document.getElementById('questionBox').innerHTML='<b>Všechna města uhašena! 🎉</b>';}
+    }
+    async function loadQuestion(cityIdx){
+      const r=await fetch('/question?city='+cityIdx);
+      if(!r.ok){document.getElementById('questionBox').innerHTML='<span style="color:red">Chyba: '+(await r.text())+'</span>';return;}
+      const j=await r.json();
+      const qb=document.getElementById('questionBox');
+      qb.innerHTML='<b>Město: '+j.city+'</b><div class=question>'+j.q.text+'</div>';
+      j.q.opts.forEach((o,i)=>{const b=document.createElement('button');b.textContent=o;b.onclick=()=>submitAnswer(cityIdx,i);qb.appendChild(b);});
+    }
+    async function submitAnswer(cityIdx,optIdx){
+      const j=await (await fetch('/answer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({city:cityIdx,answer:optIdx})})).json();
+      if(j.error){alert("Chyba: "+j.error);return;}
+      alert(j.correct?'Správně! Město uhašeno.':'Špatně! Další město hoří.');
+      fetchStatus();
+    }
+    function startGame(){fetch('/start').then(()=>fetchStatus());}
+    async function uploadQuestions(){
+      const txt=document.getElementById('questionsText').value;
+      if(!txt.trim()){alert("Pole je prázdné!");return;}
+      const j=await (await fetch('/uploadQuestions',{method:'POST',headers:{'Content-Type':'text/plain'},body:txt})).json();
+      if(j.error){alert("Chyba: "+j.error);}
+      else{alert(j.ok);document.getElementById('questionsText').value='';fetchStatus();}
+    }
+    fetchStatus();
+  </script>
+</body>
+</html>
+)rawliteral";
+  return s;
+}
+
+// --- Herní HTTP handlery ---
+void handleGamePage() {
+  gameActive = true;
+  if (!gameStarted) gameStart();
+  pixely.setBrightness(GAME_BRIGHTNESS);
+  gameUpdateStrip();
+  server.send(200, "text/html; charset=utf-8", gamePageHTML());
+}
+
+void handleGameStatus() {
+  server.send(200, "application/json; charset=utf-8", gameStatusJSON());
+}
+
+void handleGameQuestion() {
+  if (!server.hasArg("city")) { server.send(400, "application/json", "{\"error\":\"missing city\"}"); return; }
+  int idx = server.arg("city").toInt();
+  if (idx < 0 || idx >= 72) { server.send(400, "application/json", "{\"error\":\"bad city\"}"); return; }
+  String payload = gameQuestionJSON(idx);
+  if (payload.length() == 0) server.send(500, "application/json", "{\"error\":\"internal error\"}");
+  else server.send(200, "application/json; charset=utf-8", payload);
+}
+
+void handleGameStart() {
+  gameActive = true;
+  gameStart();
+  pixely.setBrightness(GAME_BRIGHTNESS);
+  server.send(200, "application/json", "{\"ok\":true}");
+}
+
+void handleGameAnswer() {
+  if (server.method() != HTTP_POST) { server.send(405); return; }
+  String body = server.arg("plain");
+  if (body.length() == 0) { server.send(400, "application/json", "{\"error\":\"empty body\"}"); return; }
+
+  int city = -1, answer = -1;
+  int pCity = body.indexOf("city");
+  if (pCity >= 0) { int c = body.indexOf(':', pCity); if (c >= 0) city = body.substring(c + 1).toInt(); }
+  int pAns = body.indexOf("answer");
+  if (pAns >= 0) { int c = body.indexOf(':', pAns); if (c >= 0) answer = body.substring(c + 1).toInt(); }
+
+  if (city < 0 || city >= 72 || answer < 0) { server.send(400, "application/json", "{\"error\":\"bad payload\"}"); return; }
+  if (questionsDynamic.empty()) { server.send(400, "application/json", "{\"error\":\"no questions loaded\"}"); return; }
+
+  int qidx = currentQuestion[city];
+  if (qidx < 0 || qidx >= (int)questionsDynamic.size()) qidx = random(questionsDynamic.size());
+  bool correct = (answer == questionsDynamic[qidx].correct);
+  if (correct) {
+    cityState[city] = CITY_EXTINGUISHED;
+  } else {
+    int nxt = gamePickRandomUnburned();
+    if (nxt >= 0) cityState[nxt] = CITY_BURNING;
+  }
+  currentQuestion[city] = -1;
+  gameUpdateStrip();
+  server.send(200, "application/json", String("{\"correct\":") + (correct ? "true" : "false") + "}");
+}
+
+void handleGameUpload() {
+  if (server.method() != HTTP_POST) { server.send(405); return; }
+  String body = server.arg("plain");
+  if (body.length() == 0) { server.send(400, "application/json", "{\"error\":\"empty body\"}"); return; }
+  String result;
+  gameLoadQuestions(body, result);
+  if (result.startsWith("Chyba")) {
+    server.send(400, "application/json", "{\"error\":\"" + gameJsonEscape(result) + "\"}");
+  } else {
+    server.send(200, "application/json", "{\"ok\":\"" + gameJsonEscape(result) + "\"}");
+  }
+}
+
+// Ukončí hru a vrátí mapu do posledního mapového režimu
+void handleGameStop() {
+  gameActive = false;
+  pixely.setBrightness(jas);
+  stahniData();  // překreslí aktuální mapu
+  server.sendHeader("Location", "http://" + WiFi.localIP().toString() + "");
+  server.send(302);
 }
 
 // Tuto funkci HTTP server zavola v pripade HTTP GET/POST pzoadavku na korenovou cestu /
@@ -394,6 +759,7 @@ void httpDotaz(void) {
                                   + (currentMap == MapCitiesMajor ? String("selected") : String("")) + "\">Zobrazit krajská města</button>\n"
                                                                                                        "  <button onclick=\"sendRegionsRequest()\" class=\""
                                   + (currentMap == MapRegions ? String("selected") : String("")) + "\">Zobrazit kraje</button>\n"
+                                                                                                   "  <button onclick=\"location.href='/game'\">🚒 Zachraň město (hra)</button>\n"
                                                                                                    "\n"
                                                                                                    "  <script>\n"
                                                                                                    "    function sendRainRequest() {\n"
@@ -477,6 +843,18 @@ void setup() {
   Serial.println(hostname);
   // Pro HTTP pozadavku / zavolame funkci httpDotaz
   server.on("/", httpDotaz);
+  // Herní režim "Zachraň město"
+  server.on("/game", HTTP_GET, handleGamePage);
+  server.on("/status", HTTP_GET, handleGameStatus);
+  server.on("/question", HTTP_GET, handleGameQuestion);
+  server.on("/start", HTTP_GET, handleGameStart);
+  server.on("/answer", HTTP_POST, handleGameAnswer);
+  server.on("/uploadQuestions", HTTP_POST, handleGameUpload);
+  server.on("/gameStop", HTTP_GET, handleGameStop);
+  // Seed pro náhodná čísla ve hře
+  randomSeed(esp_random());
+  // Inicializace herního stavu
+  for (int i = 0; i < 72; i++) { cityState[i] = CITY_OFF; currentQuestion[i] = -1; }
   // Aktivujeme server
   server.begin();
   // Nakonfigurujeme adresovatelene LED do vychozi zhasnute pozice
@@ -499,6 +877,30 @@ void setup() {
 void loop() {
   // Vyridime pripadne TCP spojeni klientu se serverem
   server.handleClient();
+
+  // Herní režim: animujeme hořící města a přeskočíme stahování mapy
+  if (gameActive) {
+    static unsigned long lastGameFrame = 0;
+    if (millis() - lastGameFrame > 120) {
+      lastGameFrame = millis();
+      for (int i = 0; i < 72; i++) {
+        if (cityState[i] == CITY_BURNING) {
+          uint8_t r = 200 + random(0, 56);  // červená 200-255
+          uint8_t g = random(0, 200);       // zelená 0-199
+          pixely.setPixelColor(i, pixely.Color(r, g, 0));  // plápolání ohně
+        } else if (cityState[i] == CITY_EXTINGUISHED) {
+          pixely.setPixelColor(i, pixely.Color(0, 0, 150));  // stabilní modrá
+        } else {
+          pixely.setPixelColor(i, 0);  // zhasnuté město
+        }
+      }
+      pixely.setBrightness(GAME_BRIGHTNESS);
+      pixely.show();
+    }
+    delay(2);
+    return;
+  }
+
   // Jednou za zvoleny interval stahnu nova data
   if (millis() - t > ((firstRun && currentMap == MapFlag) ? startupDelay : delay10)) {
     if (firstRun) {
