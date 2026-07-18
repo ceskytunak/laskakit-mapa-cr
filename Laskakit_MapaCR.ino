@@ -111,6 +111,62 @@ struct Question {
 };
 std::vector<Question> questionsDynamic;
 
+// Výchozí zabudovaná sada otázek o ČR (úroveň ~10 let).
+// Formát řádku: cislo;otazka;odp0;odp1;odp2;odp3;index_spravne(0-3)
+// Načte se při startu; web upload je může dočasně nahradit (do restartu).
+const char DEFAULT_QUESTIONS[] = R"rawliteral(
+1;Jak se jmenuje hlavní město České republiky?;Brno;Praha;Ostrava;Plzeň;1
+2;Která řeka protéká Prahou?;Labe;Morava;Vltava;Odra;2
+3;Jak se jmenuje nejvyšší hora Česka?;Praděd;Lysá hora;Radhošť;Sněžka;3
+4;Ve kterém pohoří leží Sněžka?;Krkonoše;Šumava;Jeseníky;Beskydy;0
+5;Jaké barvy má česká vlajka?;Zelená, bílá, červená;Bílá, červená, modrá;Modrá a žlutá;Bílá a červená;1
+6;Kolik sousedních států má Česká republika?;Tři;Pět;Čtyři;Dva;2
+7;Který stát NEsousedí s Českem?;Německo;Polsko;Maďarsko;Rakousko;2
+8;Jak se jmenuje česká měna?;Euro;Koruna;Dolar;Zlotý;1
+9;Jaké zvíře je na státním znaku Česka?;Orel;Medvěd;Lev;Kůň;2
+10;Kde v Praze sídlí prezident?;Karlštejn;Pražský hrad;Špilberk;Konopiště;1
+11;Který most v Praze je nejznámější?;Nuselský most;Most Legií;Karlův most;Železniční most;2
+12;Jak se jmenuje největší město na Moravě?;Olomouc;Zlín;Brno;Přerov;2
+13;Jak se jmenuje česká státní hymna?;Vltava;Kde domov můj;Škoda lásky;Ó Kanado;1
+14;Kdo nakreslil postavičku Krtečka?;Josef Lada;Karel Čapek;Zdeněk Miler;Alois Jirásek;2
+15;Ve kterém městě se vyrábějí auta Škoda?;Praha;Mladá Boleslav;Brno;Liberec;1
+16;Nejdelší řeka na území Česka je?;Labe;Morava;Vltava;Dyje;2
+17;Má Česká republika moře?;Ano;Ne;Jen v létě;Jen na jihu;1
+18;Jak se říká obyvatelům naší země?;Poláci;Slováci;Češi;Rakušané;2
+19;Který svátek slavíme 24. prosince?;Velikonoce;Štědrý den;Silvestr;Den dětí;1
+20;Kdo podle tradice nosí v Česku vánoční dárky?;Santa Claus;Děda Mráz;Ježíšek;Čert;2
+21;Které město na západě Čech je známé lázněmi?;Ostrava;Karlovy Vary;Pardubice;Kladno;1
+22;Kolik krajů má Česká republika?;13;14;10;8;1
+23;Který slavný český král se jmenoval Otec vlasti?;Karel IV.;Václav I.;Přemysl Otakar II.;Rudolf II.;0
+24;Kdo založil první univerzitu v Praze?;Karel IV.;Masaryk;Jan Hus;Rudolf II.;0
+25;Na kterou horu podle pověsti vystoupil praotec Čech?;Sněžka;Říp;Blaník;Radhošť;1
+26;Která kněžna podle pověsti předpověděla slávu Prahy?;Libuše;Božena;Ludmila;Eliška;0
+27;Ve kterém městě se vaří světoznámé pivo Pilsner?;Plzeň;Praha;Brno;Žatec;0
+28;Který český skladatel složil symfonickou báseň Vltava?;Antonín Dvořák;Bedřich Smetana;Leoš Janáček;Bohuslav Martinů;1
+29;Jak se jmenuje bájný vládce hor v Krkonoších?;Krakonoš;Rumcajs;Vodník;Bivoj;0
+30;Jak se jmenuje národní strom Česka?;Dub;Lípa;Buk;Bříza;1
+31;Který dopravní prostředek jezdí po kolejích v ulicích města?;Autobus;Tramvaj;Trolejbus;Taxi;1
+32;Čím byla proslulá Ostrava?;Těžbou uhlí;Výrobou skla;Lázněmi;Vinařstvím;0
+33;Které pohoří na jihozápadě Čech je porostlé hlubokými lesy?;Šumava;Jeseníky;Beskydy;Orlické hory;0
+34;Do kterého moře se vlévá řeka Labe?;Do Severního moře;Do Černého moře;Do Baltského moře;Do Jaderského moře;0
+35;Které město je proslulé perníkem?;Pardubice;Tábor;Cheb;Kolín;0
+36;Jak se jmenuje nejznámější zoo ležící v hlavním městě?;Zoo Zlín;Zoo Praha;Zoo Plzeň;Zoo Brno;1
+37;Co podle pověsti spí v hoře Blaník?;Vojsko českých rytířů;Draci;Obři;Skřítci;0
+38;Které bájné zvíře je spojené s pověstí o Brně?;Drak;Lev;Medvěd;Orel;0
+39;Které město bylo hlavním městem Československa?;Bratislava;Praha;Brno;Košice;1
+40;Jak se jmenoval první prezident Československa?;Tomáš Garrigue Masaryk;Václav Havel;Edvard Beneš;Antonín Zápotocký;0
+41;Jak se jmenuje slavný český loutkový pár tatínka a syna?;Spejbl a Hurvínek;Tom a Jerry;Bob a Bobek;Křemílek a Vochomůrka;0
+42;Jak se jmenují dva kutilové z večerníčku A je to?;Pat a Mat;Bob a Bobek;Rumcajs a Manka;Maková panenka;0
+43;Které město leží na soutoku Labe a Vltavy?;Mělník;Kolín;Roudnice;Litoměřice;0
+44;Jaká pohádková bytost podle pověstí žije v rybníce?;Vodník;Čert;Drak;Obr;0
+45;Kolik haléřů měla dříve jedna koruna?;Sto;Deset;Padesát;Tisíc;0
+46;Jak se jmenuje tradiční moravský sýr s výraznou vůní z Olomouce?;Olomoucké tvarůžky;Eidam;Hermelín;Niva;0
+47;Jak se jmenuje hlavní řeka Moravy?;Morava;Vltava;Ohře;Sázava;0
+48;Ve kterém kraji leží město Brno?;Jihomoravském;Středočeském;Plzeňském;Libereckém;0
+49;Na jaké řece leží Praha?;Na Vltavě;Na Labi;Na Ohři;Na Sázavě;0
+50;Jak se jmenuje známý hrad blízko Prahy, který nechal postavit Karel IV.?;Karlštejn;Konopiště;Křivoklát;Bezděz;0
+)rawliteral";
+
 // Dekoder JSONu a rozsvecovac svetylek
 int jsonDecoder(String s, bool log) {
   DeserializationError e = deserializeJson(doc, s);
@@ -855,6 +911,13 @@ void setup() {
   randomSeed(esp_random());
   // Inicializace herního stavu
   for (int i = 0; i < 72; i++) { cityState[i] = CITY_OFF; currentQuestion[i] = -1; }
+  // Načtení výchozí zabudované sady otázek o ČR
+  {
+    String loadResult;
+    gameLoadQuestions(String(DEFAULT_QUESTIONS), loadResult);
+    Serial.print("Otazky: ");
+    Serial.println(loadResult);
+  }
   // Aktivujeme server
   server.begin();
   // Nakonfigurujeme adresovatelene LED do vychozi zhasnute pozice
