@@ -165,6 +165,56 @@ const char DEFAULT_QUESTIONS[] = R"rawliteral(
 48;Ve kterém kraji leží město Brno?;Jihomoravském;Středočeském;Plzeňském;Libereckém;0
 49;Na jaké řece leží Praha?;Na Vltavě;Na Labi;Na Ohři;Na Sázavě;0
 50;Jak se jmenuje známý hrad blízko Prahy, který nechal postavit Karel IV.?;Karlštejn;Konopiště;Křivoklát;Bezděz;0
+51;Jak se jmenuje první Čech, který letěl do vesmíru?;Emil Zátopek;Jan Palach;Vladimír Remek;Jára Cimrman;2
+52;Který slavný běžec měl přezdívku Česká lokomotiva?;Roman Šebrle;Emil Zátopek;Jan Železný;Josef Masopust;1
+53;Na které řece leží České Budějovice?;Vltava;Labe;Morava;Ohře;0
+54;Které město bylo známé stříbrnými doly a ražbou mincí?;Tábor;Cheb;Kutná Hora;Znojmo;2
+55;Ve které jeskyni je propast Macocha?;Punkevní jeskyně;Koněpruské jeskyně;Bozkovské jeskyně;Chýnovská jeskyně;0
+56;Jak se jmenuje nejhlubší propast Moravského krasu?;Býčí skála;Macocha;Sloupská;Hranická;1
+57;Který strom má na podzim červené jeřabiny?;Dub;Smrk;Jeřáb;Bříza;2
+58;Jak se jmenuje mládě krávy?;Hříbě;Tele;Kůzle;Sele;1
+59;Která největší kočkovitá šelma žije v českých lesích?;Liška;Kuna;Rys;Jezevec;2
+60;Který pták klape zobákem na komíně nebo na sloupu?;Vrabec;Čáp;Sýkorka;Holub;1
+61;Který nejrychlejší pták hnízdí i v Česku?;Sokol stěhovavý;Kachna;Labuť;Vrabec;0
+62;Jaká ryba tradičně patří na český vánoční stůl?;Losos;Kapr;Pstruh;Sardinka;1
+63;Co se tradičně peče o českých Vánocích?;Cukroví;Koblihy;Chleba;Pizza;0
+64;Který zvyk patří k českým Velikonocům?;Ohňostroj;Pomlázka;Lampiony;Maškary;1
+65;Jak se jmenuje pohádkový loupežník z Jičína?;Rákosníček;Rumcajs;Křemílek;Bob;1
+66;Kde bydlí pohádkový vodník Rákosníček?;V rybníce Brčálníku;Na hradě;V lese;V jeskyni;0
+67;Jak se jmenují dva pohádkoví zajíci z večerníčku?;Bob a Bobek;Pat a Mat;Tom a Jerry;Chip a Dale;0
+68;Který slavný český malíř tvořil secesní plakáty?;Josef Lada;Alfons Mucha;Mikoláš Aleš;Josef Čapek;1
+69;Kdo napsal knihu Babička?;Karel Čapek;Jan Neruda;Božena Němcová;K. H. Mácha;2
+70;Ve které zemi vzniklo slovo robot?;V USA;V Česku;V Německu;V Anglii;1
+71;Ve kterém pohoří stojí hora Praděd?;Jeseníky;Beskydy;Krkonoše;Šumava;0
+72;Jak se jmenuje nejvyšší hora Moravy?;Sněžka;Lysá hora;Praděd;Radhošť;2
+73;Na které řece leží město Brno?;Vltava;Svratka;Labe;Odra;1
+74;Které jihomoravské město je proslulé vínem?;Liberec;Most;Znojmo;Cheb;2
+75;U kterého města stojí hrad Karlštejn?;U Prahy;U Brna;U Ostravy;U Plzně;0
+76;Které moře je Česku nejblíž na severu?;Černé moře;Baltské moře;Rudé moře;Jaderské moře;1
+77;Jak se jmenuje typická česká bramborová polévka?;Boršč;Rajská;Bramboračka;Gulášovka;2
+78;Které tradiční jídlo tvoří knedlík, zelí a vepřové maso?;Vepřo knedlo zelo;Guláš;Řízek;Svíčková;0
+79;Co je trdelník?;Polévka;Sladké pečivo;Sýr;Nápoj;1
+80;Jak se jmenuje sladké pletené vánoční pečivo?;Bábovka;Mazanec;Vánočka;Perník;2
+81;Na které řece leží Český Krumlov a Hluboká?;Labe;Vltava;Morava;Ohře;1
+82;Které město má proslulý zámek na skále nad Vltavou?;Ostrava;Kladno;Český Krumlov;Teplice;2
+83;Jak se jmenují slavné hodiny na Staroměstském náměstí v Praze?;Orloj;Zvon;Kašna;Maják;0
+84;Jak často se na orloji objeví apoštolové?;Jednou denně;Každou celou hodinu;Každou minutu;Jednou za rok;1
+85;Který hrad je označován za největší hradní komplex na světě?;Karlštejn;Špilberk;Pražský hrad;Bezděz;2
+86;Které dvě řeky se stékají v Hradci Králové?;Labe a Orlice;Vltava a Berounka;Morava a Dyje;Ohře a Bílina;0
+87;Které je krajské město Vysočiny?;Zlín;Jihlava;Liberec;Ústí nad Labem;1
+88;Které je krajské město Zlínského kraje?;Olomouc;Přerov;Zlín;Brno;2
+89;Jaký tvar má modrá část na české vlajce?;Kruh;Trojúhelník;Čtverec;Hvězda;1
+90;Jak se jmenuje nejvyšší televizní věž v Praze?;Petřínská rozhledna;Ještěd;Žižkovská věž;Sněžka;2
+91;Která pražská rozhledna připomíná menší Eiffelovku?;Petřínská rozhledna;Žižkovská věž;Ještěd;Sněžka;0
+92;Na kterém kopci u Liberce stojí hotel a vysílač Ještěd?;Říp;Ještěd;Blaník;Radhošť;1
+93;Ve které hoře podle pověsti spí vojsko svatého Václava?;Sněžka;Praděd;Blaník;Říp;2
+94;Který svatý je patronem české země a jezdí na koni?;Svatý Petr;Svatý Václav;Svatý Martin;Svatý Jiří;1
+95;Kdo podle tradice přijíždí na bílém koni na svatého Martina?;Ježíšek;Mikuláš;Svatý Martin;Čert;2
+96;Kdo naděluje dětem 5. prosince s čertem a andělem?;Mikuláš;Ježíšek;Krakonoš;Vodník;0
+97;Které stvoření doprovází Mikuláše a straší zlobivé děti?;Drak;Čert;Vlk;Medvěd;1
+98;Na které řece na jihu Čech jezdí vodáci nejčastěji?;Odra;Morava;Vltava;Dyje;2
+99;Se kterým jarním zvykem se pojí pálení čarodějnic 30. dubna?;Jaro;Zima;Léto;Podzim;0
+100;V jakém sportu vyhráli Češi olympiádu v Naganu 1998?;Fotbal;Tenis;Lední hokej;Basketbal;2
 )rawliteral";
 
 // Dekoder JSONu a rozsvecovac svetylek
@@ -743,28 +793,39 @@ void httpDotaz(void) {
     processMapRequest(server.arg("dust"), MapDust, true);
   } else if (server.hasArg("css")) {
     String cssContent = String(
+      ":root { --accent: #00A2FF; }\n"
       "html, body {\n"
       "  text-align: center;\n"
-      "  background: #FFFFFF;\n"
-      "  color: #000000;\n"
+      "  background: #f4f6f9;\n"
+      "  color: #1b2733;\n"
+      "  font-family: 'Segoe UI', Roboto, 'Helvetica Neue', system-ui, -apple-system, sans-serif;\n"
+      "  margin: 0; padding: 16px;\n"
       "}\n"
+      "h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: .3px; margin: .2em 0 .1em; }\n"
+      "h2 { font-size: 1rem; font-weight: 500; color: #5b6b7b; margin: .1em 0 1em; }\n"
+      "p { font-size: .95rem; color: #5b6b7b; margin: .3em 0 1em; }\n"
       "\n"
       "button {\n"
-      "  width: 90%; height: 32px; margin: 6px;\n"
+      "  display: inline-block;\n"
+      "  width: 90%; max-width: 420px;\n"
+      "  padding: 12px 16px; margin: 6px auto;\n"
+      "  font-family: inherit; font-size: 1rem; font-weight: 600;\n"
+      "  color: #1b2733; background: #ffffff;\n"
+      "  border: 1px solid #d6dee7; border-radius: 12px;\n"
+      "  box-shadow: 0 1px 3px rgba(0,0,0,.08);\n"
+      "  cursor: pointer;\n"
+      "  transition: transform .05s ease, box-shadow .15s ease, border-color .15s ease, background .15s ease;\n"
       "}\n"
+      "button:hover { box-shadow: 0 3px 8px rgba(0,0,0,.14); border-color: var(--accent); }\n"
+      "button:active { transform: translateY(1px); }\n"
       "\n"
       ".selected {\n"
-      "  background: #00A2FF; font-weight: bold;\n"
+      "  background: var(--accent); color: #ffffff; font-weight: 700;\n"
+      "  border-color: var(--accent); box-shadow: 0 3px 10px rgba(0,162,255,.35);\n"
       "}\n"
-      ".minimum {\n"
-      "  color: #00A2FF;\n"
-      "}\n"
-      ".maximum {\n"
-      "  color: #FF0000;\n"
-      "}\n"
-      ".median {\n"
-      "  color: #00FF00;\n"
-      "}\n"
+      ".minimum { color: var(--accent); }\n"
+      ".maximum { color: #FF0000; }\n"
+      ".median  { color: #16a34a; }\n"
       "\n");
     server.send(200, "text/css", cssContent);
   }
